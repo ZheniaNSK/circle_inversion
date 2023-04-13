@@ -5,6 +5,7 @@ import sys
 import re
 from pyautogui import size as screen_size
 import pyperclip
+import copy
 
 screen_width, screen_heigth = screen_size()
 painting = None
@@ -13,7 +14,7 @@ circle_info_is_open = False
 turtle_created = False
 root2_destroyed = True
 objects = []
-object = 0
+object_ = 0
 InversionObjects = True
 t = None
 root2 = None
@@ -25,10 +26,11 @@ turtle_inputs = []
 circle_info = [300, 0, 0]
 turtle_info = [12, 1, 1]
 coordinats_info = [1.0, 0, 0]
+colors = ["#6AEE11", "#08CB25", "#079D94", "#0838FA", "#7B08F7", "#B90AF9", "#FA08CE", "#FD0B33", "#FE530B", "#FFA80B", "#FABD02", "#F6F908", "#000000", "#555555", "#ABABAB", "#FFFFFF"]
 
 def painting_paint(text1, text2, text3, text4, root5, InversionObjects = None, root8 = None):
 	if (InversionObjects != None):
-		root8.destroy()
+		root8.destroy() 
 	
 	global objects
 	global circle_info
@@ -85,15 +87,34 @@ def painting_paint(text1, text2, text3, text4, root5, InversionObjects = None, r
 		#построение изначальных объектов
 		
 		for figure in range(int(len(objects))):
+			# заливка фигур цветом
+			
+			t.fillcolor(colors[objects[figure][0]])
+			t.begin_fill()
+			
 			t.up()
-			t.goto(objects[figure][0], objects[figure][1])
+			t.goto(objects[figure][1], objects[figure][2])
 			t.down()
 			
 			t.dot(turtle_info[1] + 1)
 			
 			for i in range(int(len(objects[figure]) / 2 - 1)):
-				t.goto(objects[figure][i * 2 + 2], objects[figure][i * 2 + 3])
-			t.goto(objects[figure][0], objects[figure][1])
+				t.goto(objects[figure][i * 2 + 3], objects[figure][i * 2 + 4])
+			t.goto(objects[figure][1], objects[figure][2])
+			
+			t.end_fill()
+			
+			if (turtle_info[0] != 12):
+				turtle.tracer(0)
+				t.up()
+				t.goto(circle_info[1], circle_info[2] - radius)
+				t.down()
+				t.width(turtle_info[2])
+				t.circle(radius)
+				t.width(turtle_info[1])
+				t.up()
+				turtle.update()
+				turtle.tracer(1)
 		
 		t.up()
 		
@@ -101,7 +122,7 @@ def painting_paint(text1, text2, text3, text4, root5, InversionObjects = None, r
 			#построение равностороннего многоугольника
 			
 			if (figure_corners == 1):
-				objects.extend([[figure_x, figure_y]])
+				objects.extend([[15, figure_x, figure_y]])
 				
 				t.goto(figure_x, figure_x)
 				
@@ -109,7 +130,7 @@ def painting_paint(text1, text2, text3, text4, root5, InversionObjects = None, r
 			else:
 				rotate = (figure_corners - 2) * 180 / figure_corners + 180
 				
-				objects.extend([[]])
+				objects.extend([[15]])
 				
 				if (figure_corners % 2):
 					t.goto(figure_x - segment_length / 2, figure_y - (segment_length / (2 * math.sin(math.radians(180 / figure_corners)))))
@@ -131,7 +152,9 @@ def painting_paint(text1, text2, text3, text4, root5, InversionObjects = None, r
 	if (InversionObjects != None):
 		#запись в массив каждого пикселя каждого объекта
 		
-		__objects = objects
+		__objects = copy.deepcopy(objects)
+		for i in range(len(__objects)):
+			__objects[i].pop(0)
 		_objects = []
 		
 		for figure in range(int(len(__objects))):
@@ -161,6 +184,7 @@ def painting_paint(text1, text2, text3, text4, root5, InversionObjects = None, r
 						end_many_coordinates_x(__objects, figure, _objects)
 					elif (__objects[figure][1] != __objects[figure][len(__objects[figure]) - 1]):
 						end_many_coordinates_y(__objects, figure, _objects)
+			_objects[figure].extend([__objects[figure][0], __objects[figure][1]])
 		
 		#вычитание координат круга из каждой точки для корректной инверсии
 		
@@ -170,13 +194,19 @@ def painting_paint(text1, text2, text3, text4, root5, InversionObjects = None, r
 				_objects[figure][i * 2 + 1] -= circle_info[2]
 		
 		for figure in range(int(len(_objects))):
+			# заливка инверсированных фигур изначальным цветом
+			
+			#t.fillcolor(colors[objects[figure][0]])
+			t.color("black", colors[objects[figure][0]])
+			t.begin_fill()
+			
 			# проверка первой точки на координату (0, 0)
 			
 			if (_objects[figure][0] == 0 and _objects[figure][1] == 0):
 				if (len(_objects[figure]) == 2):
 					_objects[figure][0] = 0.01
 					_objects[figure][1] = 0.01
-					inversion_error(figure, 1, "+", "+")
+					inversion_error(figure, "+", "+")
 				else:
 					if (_objects[figure][2] >= 0):
 						cor1 = "+"
@@ -190,7 +220,7 @@ def painting_paint(text1, text2, text3, text4, root5, InversionObjects = None, r
 					else:
 						cor2 = "-"
 						_objects[figure][1] = -0.01
-					inversion_error(figure, 1, cor1, cor2)
+					inversion_error(figure, cor1, cor2)
 			
 			#начало инверсирования каждого пикселя объектов
 			
@@ -205,6 +235,7 @@ def painting_paint(text1, text2, text3, text4, root5, InversionObjects = None, r
 			
 			for i in range(int(len(_objects[figure]) / 2 - 1)):
 				# проверка остальных точек на координату (0, 0)
+				
 				if (_objects[figure][i * 2 + 2] == 0 and _objects[figure][i * 2 + 3] == 0):
 					if (_objects[figure][i * 2 + 2] >= 0):
 						cor1 = "+"
@@ -218,17 +249,37 @@ def painting_paint(text1, text2, text3, text4, root5, InversionObjects = None, r
 					else:
 						cor2 = "-"
 						_objects[figure][i * 2 + 3] = -0.01
-						inversion_error(figure, 1, cor1, cor2)
+						inversion_error(figure, cor1, cor2)
 				
 				# инверсия остальных точек
+				
 				op = math.sqrt(_objects[figure][i * 2 + 2] * _objects[figure][i * 2 + 2] + _objects[figure][i * 2 + 3] * _objects[figure][i * 2 + 3]) / (radius * radius / math.sqrt(_objects[figure][i * 2 + 2] * _objects[figure][i * 2 + 2] + _objects[figure][i * 2 + 3] * _objects[figure][i * 2 + 3]))
 				t.goto((_objects[figure][i * 2 + 2] / op) + circle_info[1], (_objects[figure][i * 2 + 3] / op) + circle_info[2])
 			
+			t.end_fill()
 			t.up()
+			
+			if (turtle_info[0] != 12):
+				turtle.tracer(0)
+				t.goto(circle_info[1], circle_info[2] - radius)
+				t.down()
+				t.width(turtle_info[2])
+				t.circle(radius)
+				t.width(turtle_info[1])
+				t.up()
+				turtle.update()
+				turtle.tracer(1)
 	
 	t.hideturtle()
 	
 	if (turtle_info[0] == 12):
+		t.up()
+		t.goto(circle_info[1], circle_info[2] - radius)
+		t.down()
+		t.width(turtle_info[2])
+		t.circle(radius)
+		t.width(turtle_info[1])
+		t.up()
 		turtle.update()
 
 def end_many_coordinates_y(__objects, figure, _objects):
@@ -267,30 +318,24 @@ def many_coordinates_x(__objects, figure, i, _objects):
 		for middleCoordinat in range(abs(__objects[figure][i * 2 + 2] - __objects[figure][i * 2])):
 			_objects[figure].extend([__objects[figure][i * 2] + middleCoordinat + 1, __objects[figure][i * 2 + 1] + b * (middleCoordinat + 1)])
 
-def inversion_error(object, text, cor1, cor2):
+def inversion_error(object_, cor1, cor2):
 	#открытие ошибки инверсии
     
 	root9 = tk.Tk()
 	root9.focus_force()
 	root9.title("Ошибка инверсии")
+	root9.geometry("330x110+500+300")
 	root9.resizable(False, False)
 	root9.attributes('-toolwindow', True)
     
 	root9.bind("<Escape>", lambda event: quit())
 	root9.bind("r", lambda event: reference())
 	
-	if (text == 0):
-		root9.geometry("270x70+500+300")
-		tk.Label(root9, text="Невозможно корректно инверсировать").pack()
-		tk.Label(root9, text="объекты, так как в объекте " + str(object + 1)).pack()
-		tk.Label(root9, text="присутствует всего одна координата").pack()
-	else:
-		root9.geometry("330x110+500+300")
-		tk.Label(root9, text="Невозможно корректно инверсировать объекты так как").pack()
-		tk.Label(root9, text="в объекте " + str(object + 1) + " присутствует точка лежащая").pack()
-		tk.Label(root9, text="на координате (0, 0) которая должна быть инверсирована").pack()
-		tk.Label(root9, text="в (бесконечность, бесконечность) поэтому будет").pack()
-		tk.Label(root9, text="инверсирована как точка (" + cor1 + "0.01, " + cor2 + "0.01)").pack()
+	tk.Label(root9, text="Невозможно корректно инверсировать объекты так как").pack()
+	tk.Label(root9, text="в объекте " + str(object_ + 1) + " присутствует точка лежащая").pack()
+	tk.Label(root9, text="на координате (0, 0) которая должна быть инверсирована").pack()
+	tk.Label(root9, text="в (бесконечность, бесконечность) поэтому будет").pack()
+	tk.Label(root9, text="инверсирована как точка (" + cor1 + "0.01, " + cor2 + "0.01)").pack()
 
 def painting_paint_and_save_object_info(text1 = None, text2 = None, text3 = None, text4 = None, root5 = None):
     close_object_info()
@@ -309,7 +354,7 @@ def is_validate2(newval):
 def add_objects_to_object(frame):
 	#добавление координаты в объект
 	
-	i = int(len(objects[object - 1]) / 2)
+	i = int(len(objects[object_ - 1]) / 2)
 	
 	check_validate = (root3.register(is_validate), "%P")
 	
@@ -326,7 +371,7 @@ def add_objects_to_object(frame):
 	else:
 		root3.geometry("125x151+100+0")
 	
-	objects[object - 1].extend([0, 0])
+	objects[object_ - 1].extend([0, 0])
 	
 	turtle_inputs.extend([x_text, y_text])
 
@@ -477,15 +522,15 @@ def open_object_info(_object):
 	if (info_is_open == False):
 		global root3
 		global turtle_inputs
-		global object
+		global object_
 		
 		info_is_open = True
-		object = _object
+		object_ = _object
 		
 		root3 = tk.Tk()
 		root3.focus_force()
 		root3.protocol("WM_DELETE_WINDOW", lambda: close_object_info())
-		root3.title("Объект " + str(object))
+		root3.title("Объект " + str(object_))
 		root3.geometry("125x150+100+0")
 		root3.resizable(False, False)
 		root3.attributes('-toolwindow', True)
@@ -502,28 +547,33 @@ def open_object_info(_object):
 		canvas3.create_window((0, 0), window = frame3, anchor = "nw")
 		LabelFrame3.pack(fill = tk.BOTH, expand = True)
 		
-		tk.Label(frame3, text="№").grid(row = 0, column = 0, padx = 1, pady = 1)
-		tk.Label(frame3, text="X").grid(row = 0, column = 1, padx = 3, pady = 1)
-		tk.Label(frame3, text="Y").grid(row = 0, column = 2, padx = 3, pady = 1)
+		tk.Button(frame3, text="Цвет объекта", command = lambda: replace_object_color(_object)).pack(fill = tk.X, pady = 1)
+		
+		_frame3 = tk.Frame(frame3)
+		_frame3.pack(fill = tk.X)
+		
+		tk.Label(_frame3, text="№").grid(row = 0, column = 0, padx = 1, pady = 1)
+		tk.Label(_frame3, text="X").grid(row = 0, column = 1, padx = 3, pady = 1)
+		tk.Label(_frame3, text="Y").grid(row = 0, column = 2, padx = 3, pady = 1)
 		
 		check_validate = (root3.register(is_validate), "%P")
 		
-		for i in range(int(len(objects[object - 1]) / 2)):
-			l = tk.Label(frame3, text=str(i + 1) + ")")
+		for i in range(int(len(objects[object_ - 1]) / 2)):
+			l = tk.Label(_frame3, text=str(i + 1) + ")")
 			l.grid(row = i + 1, column = 0, padx = 1, pady = 1)
-		for i in range(int(len(objects[object - 1]) / 2)):
-			x_text = tk.Entry(frame3, width = 4, validate="key", validatecommand = check_validate)
+		for i in range(int(len(objects[object_ - 1]) / 2)):
+			x_text = tk.Entry(_frame3, width = 4, validate="key", validatecommand = check_validate)
 			x_text.grid(row = i + 1, column = 1, padx = 3, pady = 1)
-			x_text.insert(0, str(objects[object - 1][i * 2]))
-			y_text = tk.Entry(frame3, width = 4, validate="key", validatecommand = check_validate)
+			x_text.insert(0, str(objects[object_ - 1][i * 2 + 1]))
+			y_text = tk.Entry(_frame3, width = 4, validate="key", validatecommand = check_validate)
 			y_text.grid(row = i + 1, column = 2, padx = 3, pady = 1)
-			y_text.insert(0, str(objects[object - 1][i * 2 + 1]))
+			y_text.insert(0, str(objects[object_ - 1][i * 2 + 2]))
 			turtle_inputs.extend([x_text, y_text])
 		
-		root3.bind("c", func = lambda event: add_objects_to_object(frame3))
+		root3.bind("c", func = lambda event: add_objects_to_object(_frame3))
 		root3.bind("<Escape>", lambda event: quit())
 		root3.bind("r", lambda event: reference())
-		root3.bind("<Delete>", lambda event: delete_object(object))
+		root3.bind("<Delete>", lambda event: delete_object(object_))
 		
 		root3.mainloop()
 	else:
@@ -531,14 +581,45 @@ def open_object_info(_object):
 		
 		open_object_info(_object)
 
-def delete_object(object):
+def replace_object_color(_object):
+	#открытие выбора цвета для объекта
+    
+	root13 = tk.Tk()
+	root13.focus_force()
+	root13.title("Выбор цвета " + str(_object) + " объекта")
+	root13.geometry("150x150+500+300")
+	root13.resizable(False, False)
+	root13.attributes('-toolwindow', True)
+    
+	root13.bind("<Escape>", lambda event: quit())
+	root13.bind("r", lambda event: reference())
+	
+	tk.Label(root13, text="Выберите цвет объекта:").pack()
+	
+	frame13 = tk.Frame(root13)
+	frame13.pack(fill = tk.X)
+	
+	for i in range(int(len(colors))):
+		replace_object_color2(root13, frame13, _object, i)
+
+def replace_object_color2(root13, frame13, _object, i):
+	tk.Button(frame13, text="       ", bg = colors[i], command = lambda: select_object_color(_object, i, root13)).grid(row = i // 4, column = i % 4, padx = 2, pady = 2)
+
+def select_object_color(_object, index, root13):
+	global objects
+	
+	objects[_object - 1][0] = index
+	
+	root13.destroy()
+
+def delete_object(object_):
 	#удаление объекта
 	
 	global root3
 	global turtle_inputs
 	global info_is_open
 	
-	objects.pop(object - 1)
+	objects.pop(object_ - 1)
 	
 	turtle_inputs.clear()
 	info_is_open = False
@@ -616,15 +697,17 @@ def close_object_info():
 			#закрытие параметров объекта
 			
 			global root3
-			global object
+			global object_
 			
-			objects[object - 1].clear()
+			color = objects[object_ - 1][0]
+			objects[object_ - 1].clear()
+			objects[object_ - 1].extend([color])
 				
 			for i in range(len(turtle_inputs)):
 				if (turtle_inputs[i].get() != "" and turtle_inputs[i].get() != "-"):
-					objects[object - 1].extend([int(turtle_inputs[i].get())])
+					objects[object_ - 1].extend([int(turtle_inputs[i].get())])
 				else:
-					objects[object - 1].extend([0])
+					objects[object_ - 1].extend([0])
 			
 			root3.destroy()
 			turtle_inputs.clear()
@@ -635,7 +718,7 @@ def create_object(frame):
 	
 	global objects
 	
-	objects.extend([[0, 0]])
+	objects.extend([[15, 0, 0]])
 	objects_length = len(objects)
 	tk.Button(frame, text="Объект " + str(objects_length), command = lambda: open_object_info(objects_length)).pack(fill = tk.X, pady = 1)
 	
@@ -740,6 +823,7 @@ def open_paste_coordinats():
 def copy_coordinats():
 	global objects
 	pyperclip.copy(str(objects))
+	
 	#сообщение о копировании координат
     
 	root12 = tk.Tk()
@@ -888,7 +972,7 @@ def open_turtle():
 
 root1 = tk.Tk()
 root1.title("Инверсия относительно окружности")
-root1.geometry("325x200+500+300")
+root1.geometry("325x240+500+300")
 root1.resizable(False, False)
 root1.attributes('-toolwindow', True)
 
@@ -901,9 +985,10 @@ tk.Label(frame, text="Требуется включить английскую �
 tk.Label(frame, text="Перед использованием желательно").pack()
 tk.Label(frame, text="свернуть все открытые приложения").pack()
 tk.Label(frame, text="В измерениях может присутствовать погрешность").pack()
-tk.Button(root1, text="ОК", command = lambda: open_turtle()).place(x = 112, y = 165, width = 100, height = 25)
+tk.Label(frame, text="Некоторые нажатия на клавиши").pack()
+tk.Label(frame, text="работают в конкретных окнах").pack()
+tk.Button(root1, text="ОК", command = lambda: open_turtle()).place(x = 112, y = 205, width = 100, height = 25)
 
 root1.bind("<Escape>", lambda event: quit())
 
 root1.mainloop()
-#pyinstaller -w -F -i"E:\python\python.ico" circle_inversion.py
